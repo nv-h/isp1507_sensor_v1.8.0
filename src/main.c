@@ -9,6 +9,9 @@
 #include <devicetree.h>
 #include <drivers/gpio.h>
 
+#include <logging/log.h>
+LOG_MODULE_REGISTER(blink);
+
 /* 1000 msec = 1 sec */
 #define SLEEP_TIME_MS   1000
 
@@ -29,9 +32,12 @@
 
 void main(void)
 {
+	LOG_MODULE_DECLARE(blink);
+
 	const struct device *dev;
 	bool led_is_on = true;
 	int ret;
+	uint32_t count = 0;
 
 	dev = device_get_binding(LED0);
 	if (dev == NULL) {
@@ -47,5 +53,6 @@ void main(void)
 		gpio_pin_set(dev, PIN, (int)led_is_on);
 		led_is_on = !led_is_on;
 		k_msleep(SLEEP_TIME_MS);
+		LOG_INF("Blink #%d", ++count);
 	}
 }
