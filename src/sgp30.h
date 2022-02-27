@@ -103,6 +103,11 @@ void sgp30_setBaseline(sgp30_sensor_t *dev, uint16_t baselineCO2, uint16_t basel
 //sending 0x0000 resets to default and turns off humidity compensation
 void sgp30_setHumidity(sgp30_sensor_t *dev, uint16_t humidity);
 
+//Set humidity and temperature to sensor as Compensation values
+//Convert relative humidity to absolute humidity
+//Temperature is needed to calc absolute humidity
+void sgp30_setCompensation(sgp30_sensor_t *dev, float humidity, float temperature);
+
 //gives feature set version number (see data sheet)
 //returns false if CRC8 check failed and true if successful
 SGP30ERR sgp30_getFeatureSetVersion(sgp30_sensor_t *dev);
@@ -122,6 +127,9 @@ SGP30ERR sgp30_getSerialID(sgp30_sensor_t *dev, int64_t *serialID);
 //Sensor runs on chip self test
 //returns true if successful
 SGP30ERR sgp30_measureTest(sgp30_sensor_t *dev);
+
+double RHtoAbsolute (float relHumidity, float tempC);
+uint16_t doubleToFixedPoint( double number);
 
 #ifdef SGP30_LOOKUP_TABLE
   //lookup table for CRC8  http://www.sunshine2k.de/coding/javascript/crc/crc_js.html

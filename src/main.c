@@ -85,17 +85,16 @@ void main(void)
 		led_is_on = !led_is_on;
 
 		if (sht3x_get_results(sht3x, &temperature, &humidity) &&
-		    qmp6988_calcPressure(qmp6988, &pressure, &temperature_p)) {
-			LOG_INF("[%d]: %d C %d %% %4d hPa(t=%2d)",
-				++count, (int)temperature, (int)humidity, (int)pressure, (int)temperature_p
+		    qmp6988_calcPressure(qmp6988, &pressure, &temperature_p) &&
+			!sgp30_measureAirQuality(sgp30)) {
+			LOG_INF("[%d]: %d C %d %% %4d hPa(t=%2d) %d ppm CO2 %d ppm TVOC",
+				++count,
+				(int)temperature, (int)humidity,
+				(int)pressure, (int)temperature_p,
+				sgp30->CO2, sgp30->TVOC
 				);
 		}
-		SGP30ERR sgp30_err = sgp30_measureAirQuality(sgp30);
-		if (sgp30_err == SGP30_SUCCESS) {
-			LOG_INF("[%d]: %d ppm CO2 %d ppm TVOC",
-				++count, sgp30->CO2, sgp30->TVOC
-				);
-		}
+		sgp30_setCompensation(sgp30, humidity, temperature);
 		k_msleep(SLEEP_TIME_MS);
 	}
 }

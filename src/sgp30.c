@@ -36,6 +36,7 @@
   THE SOFTWARE.
 */
 
+#include <math.h>
 #include <kernel.h>
 #include <drivers/i2c.h>
 
@@ -177,6 +178,22 @@ void sgp30_setHumidity(sgp30_sensor_t *dev, uint16_t humidity)
   };
 
   i2c_write(dev->bus, set_humidity_command, sizeof(set_humidity_command), dev->addr);
+}
+
+//Set humidity and temperature to sensor as Compensation values
+//Convert relative humidity to absolute humidity
+//Temperature is needed to calc absolute humidity
+void sgp30_setCompensation(sgp30_sensor_t *dev, float humidity, float temperature)
+{
+  //Convert relative humidity to absolute humidity
+  double absHumidity = RHtoAbsolute(humidity, temperature);
+
+  //Convert the double type humidity to a fixed point 8.8bit number
+  uint16_t sensHumidity = doubleToFixedPoint(absHumidity);
+
+  //Set the humidity compensation on the SGP30 to the measured value
+  //If no humidity sensor attached, sensHumidity should be 0 and sensor will use default
+  sgp30_setHumidity(dev, sensHumidity);
 }
 
 //gives feature set version number (see data sheet)
@@ -328,3 +345,17 @@ uint8_t sgp30_CRC8(uint16_t data)
   return CRC;
 }
 #endif
+
+double RHtoAbsolute (float relHumidity, float tempC) {
+  double eSat = 6.11 * pow(10.0, (7.5 * tempC / (237.7 + tempC)));
+  double vaporPressure = (relHumidity * eSat) / 100; //millibars
+  double absHumidity = 1000 * vaporPressure * 100 / ((tempC + 273) * 461.5); //Ideal gas law with unit conversions
+  return absHumidity;
+}
+
+uint16_t doubleToFixedPoint( double number) {
+  int power = 1 << 8;
+  double number2 = number * power;
+  uint16_t value = floor(number2 + 0.5);
+  return value;
+}
