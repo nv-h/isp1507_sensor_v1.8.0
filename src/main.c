@@ -17,6 +17,7 @@ LOG_MODULE_REGISTER(sensor);
 
 #include "sht3x.h"
 #include "qmp6988.h"
+#include "sgp30.h"
 
 /* 1000 msec = 1 sec */
 #define SLEEP_TIME_MS   1000
@@ -71,10 +72,17 @@ void main(void)
 		return;
 	}
 
+	sgp30_sensor_t *sgp30 = sgp30_init_sensor(i2c_dev, SGP30_I2C_DEFAULT_ADDRESS);
+	if (sgp30 == NULL) {
+		LOG_ERR("Cannot init sgp30 sensor");
+		return;
+	}
+	sgp30_initAirQuality(sgp30);
+	k_msleep(INIT_AIR_QUALITY_DURATION_MS);
+
 	while (1) {
 		gpio_pin_set(led_dev, PIN, (int)led_is_on);
 		led_is_on = !led_is_on;
-		k_msleep(SLEEP_TIME_MS);
 
 		if (sht3x_get_results(sht3x, &temperature, &humidity) &&
 		    qmp6988_calcPressure(qmp6988, &pressure, &temperature_p)) {
@@ -82,5 +90,12 @@ void main(void)
 				++count, (int)temperature, (int)humidity, (int)pressure, (int)temperature_p
 				);
 		}
+		SGP30ERR sgp30_err = sgp30_measureAirQuality(sgp30);
+		if (sgp30_err == SGP30_SUCCESS) {
+			LOG_INF("[%d]: %d ppm CO2 %d ppm TVOC",
+				++count, sgp30->CO2, sgp30->TVOC
+				);
+		}
+		k_msleep(SLEEP_TIME_MS);
 	}
 }
