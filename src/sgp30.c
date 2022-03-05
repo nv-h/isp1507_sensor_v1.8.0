@@ -88,7 +88,7 @@ void sgp30_initAirQuality(sgp30_sensor_t *dev)
 //CO2 returned in ppm, Total Volatile Organic Compounds (TVOC) returned in ppb
 //Will give fixed values of CO2=400 and TVOC=0 for first 15 seconds after init
 //Returns SGP30_SUCCESS if successful or other error code if unsuccessful
-SGP30ERR sgp30_measureAirQuality(sgp30_sensor_t *dev)
+bool sgp30_measureAirQuality(sgp30_sensor_t *dev)
 {
   i2c_write(dev->bus, measure_air_quality, 2, dev->addr); //command to measure air quali, dev->addrty
   //Hang out while measurement is taken. datasheet says 10-12ms
@@ -101,15 +101,15 @@ SGP30ERR sgp30_measureAirQuality(sgp30_sensor_t *dev)
   _CO2 |= rx_buf[1];              //store LSB in CO2
   uint8_t checkSum = rx_buf[2];   //verify checksum
   if (checkSum != sgp30_CRC8(_CO2))
-    return SGP30_ERR_BAD_CRC;                   //checksum failed
+    return false;                  //checksum failed
   uint16_t _TVOC = rx_buf[3] << 8; //store MSB in TVOC
   _TVOC |= rx_buf[4];              //store LSB in TVOC
   checkSum = rx_buf[5];            //verify checksum
   if (checkSum != sgp30_CRC8(_TVOC))
-    return SGP30_ERR_BAD_CRC; //checksum failed
-  dev->CO2 = _CO2;           //publish valid data
-  dev->TVOC = _TVOC;         //publish valid data
-  return SGP30_SUCCESS;
+    return false;    //checksum failed
+  dev->CO2 = _CO2;   //publish valid data
+  dev->TVOC = _TVOC; //publish valid data
+  return true;
 }
 
 //Returns the current calculated baseline from

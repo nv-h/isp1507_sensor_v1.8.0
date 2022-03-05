@@ -79,7 +79,7 @@ void sgp30_initAirQuality(sgp30_sensor_t *dev);
 //CO2 returned in ppm, Total Volatile Organic Compounds (TVOC) returned in ppb
 //Will give fixed values of CO2=400 and TVOC=0 for first 15 seconds after init
 //returns false if CRC8 check failed and true if successful
-SGP30ERR sgp30_measureAirQuality(sgp30_sensor_t *dev);
+bool sgp30_measureAirQuality(sgp30_sensor_t *dev);
 
 //Returns the current calculated baseline from
 //the sensor's dynamic baseline calculations
