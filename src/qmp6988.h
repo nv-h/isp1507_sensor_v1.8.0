@@ -91,7 +91,7 @@ typedef struct _qmp6988_ik_data {
 } qmp6988_ik_data_t;
 
 typedef struct {
-    struct device *bus;
+    const struct device *bus;
     uint16_t addr;
 
     qmp6988_cali_data_t cali;

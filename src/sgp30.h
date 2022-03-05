@@ -55,7 +55,7 @@ typedef enum
 } SGP30ERR;
 
 typedef struct {
-  struct device *bus;
+  const struct device *bus;
   uint16_t addr;
 
   uint16_t CO2;

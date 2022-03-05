@@ -123,17 +123,17 @@ typedef enum {
  */
 typedef struct {
 
-    uint32_t        error_code;      // combined error codes
+    uint32_t              error_code;      // combined error codes
 
-    struct device * bus;             // I2C bus at which sensor is connected
-    uint16_t        addr;            // I2C slave address of the sensor
+    const struct device * bus;             // I2C bus at which sensor is connected
+    uint16_t              addr;            // I2C slave address of the sensor
 
-    sht3x_mode_t    mode;            // used measurement mode
-    sht3x_repeat_t  repeatability;   // used repeatability
+    sht3x_mode_t          mode;            // used measurement mode
+    sht3x_repeat_t        repeatability;   // used repeatability
 
-    bool            meas_started;    // indicates whether measurement started
-    int64_t         meas_start_time; // measurement start time in us
-    bool            meas_first;      // first measurement in periodic mode
+    bool                  meas_started;    // indicates whether measurement started
+    int64_t               meas_start_time; // measurement start time in us
+    bool                  meas_first;      // first measurement in periodic mode
 
 } sht3x_sensor_t;
 
