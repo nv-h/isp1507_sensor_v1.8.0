@@ -7,6 +7,7 @@
 #include <stdio.h>
 
 #include <zephyr.h>
+#include <kernel.h>
 #include <device.h>
 #include <devicetree.h>
 #include <drivers/gpio.h>
@@ -50,7 +51,44 @@ static struct sensors env_sensors = {
 #endif
 };
 
-bool init_i2c_sensors(struct sensors *env_sensors)
+static struct device *led_dev;
+
+static bool init_i2c_sensors(struct sensors *env_sensors);
+static void get_i2c_sensors_values(struct sensors *env_sensors);
+static void app_work_handler(struct k_work *work);
+static void app_timer_handler(struct k_timer *dummy);
+
+K_WORK_DEFINE(app_work, app_work_handler);
+K_TIMER_DEFINE(app_timer, app_timer_handler, NULL);
+
+static void app_work_handler(struct k_work *work)
+{
+	gpio_pin_set(led_dev, PIN, 0);
+
+	get_i2c_sensors_values(&env_sensors);
+#ifdef CONFIG_SGP30
+	LOG_INF("%d C %d %% %4d hPa(t=%2d) %d ppm CO2 %d ppm TVOC",
+		(int)env_sensors.temperature, (int)env_sensors.humidity,
+		(int)env_sensors.pressure, (int)env_sensors.temperature_p,
+		env_sensors.sgp30->CO2, env_sensors.sgp30->TVOC
+		);
+#else
+	LOG_INF("%d C %d %% %4d hPa(t=%2d)",
+		(int)env_sensors.temperature, (int)env_sensors.humidity,
+		(int)env_sensors.pressure, (int)env_sensors.temperature_p
+		);
+#endif
+
+	gpio_pin_set(led_dev, PIN, 1);
+}
+
+static void app_timer_handler(struct k_timer *dummy)
+{
+    k_work_submit(&app_work);
+}
+
+
+static bool init_i2c_sensors(struct sensors *env_sensors)
 {
 	env_sensors->sht3x = sht3x_init_sensor(env_sensors->i2c_dev, SHT3x_ADDR_1);
 	if (env_sensors->sht3x == NULL) {
@@ -81,7 +119,7 @@ bool init_i2c_sensors(struct sensors *env_sensors)
 	return true;
 }
 
-void get_i2c_sensors_values(struct sensors *env_sensors)
+static void get_i2c_sensors_values(struct sensors *env_sensors)
 {
 	int ret;
 	ret = sht3x_measure(env_sensors->sht3x, &env_sensors->temperature, &env_sensors->humidity);
@@ -97,11 +135,9 @@ void get_i2c_sensors_values(struct sensors *env_sensors)
 void main(void)
 {
 	LOG_MODULE_DECLARE(sensor);
-
-	bool led_is_on = true;
 	int ret;
 
-	const struct device *led_dev = device_get_binding(LED0);
+	led_dev = device_get_binding(LED0);
 	if (led_dev == NULL) {
 		LOG_ERR("Cannot get LED device: %s", LED0);
 		return;
@@ -119,24 +155,8 @@ void main(void)
 		return;
 	}
 
-	while (1) {
-		gpio_pin_set(led_dev, PIN, (int)led_is_on);
-		led_is_on = !led_is_on;
+	/* start periodic timer that expires once every second */
+	k_timer_start(&app_timer, K_SECONDS(1), K_SECONDS(1));
 
-		get_i2c_sensors_values(&env_sensors);
-#ifdef CONFIG_SGP30
-		LOG_INF("%d C %d %% %4d hPa(t=%2d) %d ppm CO2 %d ppm TVOC",
-			(int)env_sensors.temperature, (int)env_sensors.humidity,
-			(int)env_sensors.pressure, (int)env_sensors.temperature_p,
-			env_sensors.sgp30->CO2, env_sensors.sgp30->TVOC
-			);
-#else
-		LOG_INF("%d C %d %% %4d hPa(t=%2d)",
-			(int)env_sensors.temperature, (int)env_sensors.humidity,
-			env_sensors.sgp30->CO2, env_sensors.sgp30->TVOC
-			);
-#endif
-
-		k_msleep(SLEEP_TIME_MS);
-	}
+	// do nothing
 }
