@@ -32,7 +32,9 @@ struct sensors {
 	const struct device *i2c_dev;
 	sht3x_sensor_t *sht3x;
 	qmp6988_sensor_t *qmp6988;
+#ifdef CONFIG_SGP30
 	sgp30_sensor_t *sgp30;
+#endif
 	float temperature;
 	float humidity;
 	float pressure;
@@ -43,7 +45,9 @@ static struct sensors env_sensors = {
 	.i2c_dev = DEVICE_DT_GET(DT_NODELABEL(i2c0)),
 	.sht3x = NULL,
 	.qmp6988 = NULL,
+#ifdef CONFIG_SGP30
 	.sgp30 = NULL,
+#endif
 };
 
 bool init_i2c_sensors(struct sensors *env_sensors)
@@ -53,8 +57,6 @@ bool init_i2c_sensors(struct sensors *env_sensors)
 		LOG_ERR("Cannot init sht3x sensor");
 		return false;
 	}
-	// Start periodic measurements with 1 measurement per second.
-	sht3x_start_measurement(env_sensors->sht3x, sht3x_periodic_1mps, sht3x_high);
 
 	// Wait until first measurement is ready (constant time of at least 30 ms
 	// or the duration returned from *sht3x_get_measurement_duration*).
@@ -66,6 +68,7 @@ bool init_i2c_sensors(struct sensors *env_sensors)
 		return false;
 	}
 
+#ifdef CONFIG_SGP30
 	env_sensors->sgp30 = sgp30_init_sensor(env_sensors->i2c_dev, SGP30_I2C_DEFAULT_ADDRESS);
 	if (env_sensors->sgp30 == NULL) {
 		LOG_ERR("Cannot init sgp30 sensor");
@@ -73,6 +76,7 @@ bool init_i2c_sensors(struct sensors *env_sensors)
 	}
 	sgp30_initAirQuality(env_sensors->sgp30);
 	k_msleep(INIT_AIR_QUALITY_DURATION_MS);
+#endif
 
 	return true;
 }
@@ -80,12 +84,14 @@ bool init_i2c_sensors(struct sensors *env_sensors)
 void get_i2c_sensors_values(struct sensors *env_sensors)
 {
 	int ret;
-	ret = sht3x_get_results(env_sensors->sht3x, &env_sensors->temperature, &env_sensors->humidity);
+	ret = sht3x_measure(env_sensors->sht3x, &env_sensors->temperature, &env_sensors->humidity);
 	qmp6988_calcPressure(env_sensors->qmp6988, &env_sensors->pressure, &env_sensors->temperature_p);
+#ifdef CONFIG_SGP30
 	sgp30_measureAirQuality(env_sensors->sgp30);
 	if (ret) {
 		sgp30_setCompensation(env_sensors->sgp30, env_sensors->humidity, env_sensors->temperature);
 	}
+#endif
 }
 
 void main(void)
@@ -97,7 +103,7 @@ void main(void)
 
 	const struct device *led_dev = device_get_binding(LED0);
 	if (led_dev == NULL) {
-		LOG_ERR("Cannot get LED device");
+		LOG_ERR("Cannot get LED device: %s", LED0);
 		return;
 	}
 
@@ -109,7 +115,7 @@ void main(void)
 
 	ret = init_i2c_sensors(&env_sensors);
 	if (!ret) {
-		LOG_ERR("Cannot init i2c sensors");
+		LOG_ERR("Cannot init i2c sensors [%d]", ret);
 		return;
 	}
 
@@ -118,11 +124,18 @@ void main(void)
 		led_is_on = !led_is_on;
 
 		get_i2c_sensors_values(&env_sensors);
+#ifdef CONFIG_SGP30
 		LOG_INF("%d C %d %% %4d hPa(t=%2d) %d ppm CO2 %d ppm TVOC",
 			(int)env_sensors.temperature, (int)env_sensors.humidity,
 			(int)env_sensors.pressure, (int)env_sensors.temperature_p,
 			env_sensors.sgp30->CO2, env_sensors.sgp30->TVOC
 			);
+#else
+		LOG_INF("%d C %d %% %4d hPa(t=%2d)",
+			(int)env_sensors.temperature, (int)env_sensors.humidity,
+			env_sensors.sgp30->CO2, env_sensors.sgp30->TVOC
+			);
+#endif
 
 		k_msleep(SLEEP_TIME_MS);
 	}
