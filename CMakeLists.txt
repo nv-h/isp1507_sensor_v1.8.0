@@ -7,5 +7,6 @@ project(sensor)
 target_sources(app
     PRIVATE
         src/main.c src/sht3x.c src/qmp6988.c src/sgp30.c
+        src/battery.c
         src/app_bt.c
     )

@@ -22,37 +22,45 @@
 		};
 	};
 
-    pwmleds {
-        compatible = "pwm-leds";
-        pwm_led0: pwm_led_0 {
-            pwms = <&pwm0 11>;
-        };
-    };
+	pwmleds {
+		compatible = "pwm-leds";
+		pwm_led0: pwm_led_0 {
+			pwms = <&pwm0 11>;
+		};
+	};
 
 
-    /* These aliases are provided for compatibility with samples */
-    aliases {
-        led0 = &led0;
-        pwm-led0 = &pwm_led0;
-        bootloader-led0 = &led0;
-    };
+	/* These aliases are provided for compatibility with samples */
+	aliases {
+		led0 = &led0;
+		pwm-led0 = &pwm_led0;
+		bootloader-led0 = &led0;
+	};
+
+	zephyr,user {
+		io-channels = <&adc 4>;
+	 };
 };
 
 &gpio0 {
-    status = "okay";
+	status = "okay";
 };
 
 i2c: &i2c0 {
-    compatible = "nordic,nrf-twi";
-    status = "okay";
-    sda-pin = <29>;
-    scl-pin = <28>;
+	compatible = "nordic,nrf-twi";
+	status = "okay";
+	sda-pin = <29>;
+	scl-pin = <28>;
 };
 
 &pwm0 {
-    status = "okay";
-    ch0-pin = <11>;
-    ch0-inverted;
+	status = "okay";
+	ch0-pin = <11>;
+	ch0-inverted;
+};
+
+&adc {
+	status = "okay";
 };
 
 &flash0 {
