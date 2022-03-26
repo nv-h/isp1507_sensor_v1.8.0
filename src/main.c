@@ -20,6 +20,8 @@ LOG_MODULE_REGISTER(sensor);
 #include "qmp6988.h"
 #include "sgp30.h"
 
+#include "app_bt.h"
+
 /* 1000 msec = 1 sec */
 #define SLEEP_TIME_MS   1000
 
@@ -51,7 +53,9 @@ static struct sensors env_sensors = {
 #endif
 };
 
-static struct device *led_dev;
+const static struct device *led_dev;
+
+static int app_battery_level = 100;
 
 static bool init_i2c_sensors(struct sensors *env_sensors);
 static void get_i2c_sensors_values(struct sensors *env_sensors);
@@ -79,6 +83,14 @@ static void app_work_handler(struct k_work *work)
 		);
 #endif
 
+	// FIXME: dummy
+	if (app_battery_level == 50) {
+		app_battery_level = 100;
+	} else {
+		app_battery_level--;
+	}
+	bt_app_send_battery_level(app_battery_level);
+
 	gpio_pin_set(led_dev, PIN, 1);
 }
 
@@ -87,6 +99,35 @@ static void app_timer_handler(struct k_timer *dummy)
     k_work_submit(&app_work);
 }
 
+static void connected(struct bt_conn *conn, uint8_t err)
+{
+	if (err) {
+		printk("Connection failed (err %u)\n", err);
+		return;
+	}
+
+	printk("Connected\n");
+}
+
+static void disconnected(struct bt_conn *conn, uint8_t reason)
+{
+	printk("Disconnected (reason %u)\n", reason);
+}
+
+BT_CONN_CB_DEFINE(conn_callbacks) = {
+	.connected        = connected,
+	.disconnected     = disconnected,
+};
+
+static int app_battery_cb(void)
+{
+	// FIXME: dummy
+	return app_battery_level;
+}
+
+static struct bt_app_cb app_callbacks = {
+	.battery_cb = app_battery_cb,
+};
 
 static bool init_i2c_sensors(struct sensors *env_sensors)
 {
@@ -152,6 +193,18 @@ void main(void)
 	ret = init_i2c_sensors(&env_sensors);
 	if (!ret) {
 		LOG_ERR("Cannot init i2c sensors [%d]", ret);
+		return;
+	}
+
+	ret = bt_app_init(&app_callbacks);
+	if (ret) {
+		LOG_ERR("Failed to init bt [%d]", ret);
+		return;
+	}
+
+	ret = bt_app_advertise_start();
+	if (ret) {
+		LOG_ERR("Failed to start advertising [%d]", ret);
 		return;
 	}
 
