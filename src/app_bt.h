@@ -35,7 +35,9 @@ int bt_app_init(struct bt_app_cb *callbacks);
 
 /** @brief Send data (notify).
  *
- * @param[in] data notify data.
+ * If the notify is not enabled, the data will be discarded.
+ *
+ * @param[in] data notify data. Able to input any data.
  * @param[in] len length of notify data.
  *
  * @retval 0 If the operation was successful.

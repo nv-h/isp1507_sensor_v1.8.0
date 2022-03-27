@@ -45,6 +45,13 @@ struct sensors {
 	float temperature_p;
 };
 
+typedef struct {
+	int battery_mV;
+	float temperature;
+	float humidity;
+	float pressure;
+} send_data_t;
+
 static struct sensors env_sensors = {
 	.i2c_dev = DEVICE_DT_GET(DT_NODELABEL(i2c0)),
 	.sht3x = NULL,
@@ -56,7 +63,12 @@ static struct sensors env_sensors = {
 
 const static struct device *led_dev;
 
-static int app_battery_mV = 3000;
+static send_data_t send_data = {
+	.battery_mV = 0,
+	.temperature = 0,
+	.humidity = 0,
+	.pressure = 0,
+};
 
 static bool init_i2c_sensors(struct sensors *env_sensors);
 static void get_i2c_sensors_values(struct sensors *env_sensors);
@@ -76,9 +88,8 @@ static void app_work_handler(struct k_work *work)
 		LOG_WRN("Failed to read battery voltage: %d\n",
 				batt_mV);
 	} else {
-		app_battery_mV = batt_mV;
+		send_data.battery_mV = batt_mV;
 	}
-	bt_app_send_data(&app_battery_mV, sizeof(app_battery_mV));
 	battery_measure_enable(false);
 
 	get_i2c_sensors_values(&env_sensors);
@@ -87,15 +98,20 @@ static void app_work_handler(struct k_work *work)
 		(int)env_sensors.temperature, (int)env_sensors.humidity,
 		(int)env_sensors.pressure, (int)env_sensors.temperature_p,
 		env_sensors.sgp30->CO2, env_sensors.sgp30->TVOC,
-		app_battery_mV
+		batt_mV
 		);
 #else
 	LOG_INF("%d C %d %% %4d hPa(t=%2d) %d mV",
 		(int)env_sensors.temperature, (int)env_sensors.humidity,
 		(int)env_sensors.pressure, (int)env_sensors.temperature_p,
-		app_battery_mV
+		batt_mV
 		);
 #endif
+
+	send_data.temperature = env_sensors.temperature;
+	send_data.humidity = env_sensors.humidity;
+	send_data.pressure = env_sensors.pressure;
+	bt_app_send_data(&send_data, sizeof(send_data_t));
 
 	gpio_pin_set(led_dev, PIN, 1);
 }
@@ -127,8 +143,8 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 
 static int app_bt_cb(void *data)
 {
-	data = (void *)&app_battery_mV;
-	return sizeof(app_battery_mV);
+	data = (void *)&send_data;
+	return sizeof(send_data_t);
 }
 
 static struct bt_app_cb app_callbacks = {

@@ -5,12 +5,12 @@ from struct import unpack
 
 DEVICE_NAME = "isp1507_sensor"
 SERVICE_UUID = "c7839aa8-1903-40b5-a8f0-426e09ffb390"
-BATTERY_CHARACTERISTIC_UUID = "c7839aa9-1903-40b5-a8f0-426e09ffb390"
+CHARACTERISTIC_UUID = "c7839aa9-1903-40b5-a8f0-426e09ffb390"
 
 
 def notify_handler(sender, data):
-    bt_lvl = unpack("<i", data)[0]
-    print(f"notify: {bt_lvl}")
+    unpacked = unpack("<ifff", data)
+    print(f"notify: {unpacked}")
 
 
 async def main():
@@ -27,12 +27,12 @@ async def main():
         print("connected")
 
         print('notify handler start')
-        await client.start_notify(BATTERY_CHARACTERISTIC_UUID, notify_handler)
+        await client.start_notify(CHARACTERISTIC_UUID, notify_handler)
 
-        await asyncio.sleep(5.0)
+        await asyncio.sleep(10.0)
 
         print('notify handler stop')
-        await client.stop_notify(BATTERY_CHARACTERISTIC_UUID)
+        await client.stop_notify(CHARACTERISTIC_UUID)
 
 
 asyncio.run(main())
