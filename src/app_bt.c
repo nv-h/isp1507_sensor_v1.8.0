@@ -34,15 +34,15 @@ static ssize_t read_function(struct bt_conn *conn,
 						   uint16_t len,
 						   uint16_t offset)
 {
-	// const char *value = attr->user_data;
-
 	LOG_DBG("Attribute read, handle: %u, conn: %p",
 		attr->handle, (void *)conn);
 
 	if (app_cb.app_bt_cb) {
-		int len = app_cb.app_bt_cb(read_data_p);
+		char *data[64]; // TODO: fix size
+		int data_len = app_cb.app_bt_cb(data);
+		LOG_HEXDUMP_INF(data, data_len, "read data");
 		return bt_gatt_attr_read(
-			conn, attr, buf, len, offset, read_data_p, sizeof(len)
+			conn, attr, buf, len, offset, data, data_len
 			);
 	}
 

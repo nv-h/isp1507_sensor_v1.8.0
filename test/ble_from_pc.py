@@ -26,6 +26,9 @@ async def main():
     async with BleakClient(device, timeout=20.0) as client:
         print("connected")
 
+        val = await client.read_gatt_char(CHARACTERISTIC_UUID)
+        print(f'read: {unpack("<ifff", val)}')
+
         print('notify handler start')
         await client.start_notify(CHARACTERISTIC_UUID, notify_handler)
 
