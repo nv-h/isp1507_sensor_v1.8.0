@@ -16,6 +16,8 @@
 #define APP_BT_UUID_BASE    BT_UUID_DECLARE_128(APP_BT_UUID_BASE_VAL)
 #define APP_BT_UUID_CHAR    BT_UUID_DECLARE_128(APP_BT_UUID_CHAR_VAL)
 
+#define APP_BT_MAX_ATTR_LEN 64
+
 typedef int (*app_bt_cb_t)(void *data);
 
 struct bt_app_cb {

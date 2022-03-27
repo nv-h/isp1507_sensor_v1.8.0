@@ -19,8 +19,7 @@
 LOG_MODULE_REGISTER(app_bt, CONFIG_LOG_DEFAULT_LEVEL);
 
 static bool notify_enabled;
-static int initial_val = 0; // dummy
-static void *read_data_p;
+static char char_value[APP_BT_MAX_ATTR_LEN];
 static struct bt_app_cb app_cb;
 
 static void app_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value)
@@ -29,20 +28,22 @@ static void app_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value)
 }
 
 static ssize_t read_function(struct bt_conn *conn,
-						   const struct bt_gatt_attr *attr,
-						   void *buf,
-						   uint16_t len,
-						   uint16_t offset)
+                             const struct bt_gatt_attr *attr,
+                             void *buf,
+                             uint16_t len,
+                             uint16_t offset)
 {
 	LOG_DBG("Attribute read, handle: %u, conn: %p",
 		attr->handle, (void *)conn);
 
 	if (app_cb.app_bt_cb) {
-		char *data[64]; // TODO: fix size
-		int data_len = app_cb.app_bt_cb(data);
-		LOG_HEXDUMP_INF(data, data_len, "read data");
+		int data_len = app_cb.app_bt_cb(attr->user_data);
+		if (data_len < 0) {
+			return data_len;
+		}
+
 		return bt_gatt_attr_read(
-			conn, attr, buf, len, offset, data, data_len
+			conn, attr, buf, len, offset, attr->user_data, data_len
 			);
 	}
 
@@ -55,9 +56,9 @@ BT_GATT_PRIMARY_SERVICE(APP_BT_UUID_BASE),
 		APP_BT_UUID_CHAR,
 		BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY,
 		BT_GATT_PERM_READ, read_function, NULL,
-		&initial_val),
+		char_value),
 	BT_GATT_CCC(app_ccc_cfg_changed,
-			BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+		BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
 );
 
 int bt_app_init(struct bt_app_cb *callbacks)

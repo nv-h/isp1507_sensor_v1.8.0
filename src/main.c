@@ -143,7 +143,11 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 
 static int app_bt_cb(void *data)
 {
-	// Note: Now the maximum data size is 64 bytes.
+	// Note: The maximum data size is defined by APP_BT_MAX_ATTR_LEN.
+	if (APP_BT_MAX_ATTR_LEN < sizeof(send_data_t)) {
+		LOG_ERR("app_bt_cb(): Too large data size");
+		return -EINVAL;
+	}
 	memcpy(data, &send_data, sizeof(send_data_t));
 	return sizeof(send_data_t);
 }
