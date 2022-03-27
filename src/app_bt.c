@@ -19,7 +19,8 @@
 LOG_MODULE_REGISTER(app_bt, CONFIG_LOG_DEFAULT_LEVEL);
 
 static bool notify_enabled;
-static int batery_level;
+static int initial_val = 0; // dummy
+static void *read_data_p;
 static struct bt_app_cb app_cb;
 
 static void app_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value)
@@ -27,21 +28,21 @@ static void app_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value)
 	notify_enabled = (value == BT_GATT_CCC_NOTIFY);
 }
 
-static ssize_t read_button(struct bt_conn *conn,
+static ssize_t read_function(struct bt_conn *conn,
 						   const struct bt_gatt_attr *attr,
 						   void *buf,
 						   uint16_t len,
 						   uint16_t offset)
 {
-	const char *value = attr->user_data;
+	// const char *value = attr->user_data;
 
 	LOG_DBG("Attribute read, handle: %u, conn: %p",
 		attr->handle, (void *)conn);
 
-	if (app_cb.battery_cb) {
-		batery_level = app_cb.battery_cb();
+	if (app_cb.app_bt_cb) {
+		int len = app_cb.app_bt_cb(read_data_p);
 		return bt_gatt_attr_read(
-			conn, attr, buf, len, offset, value, sizeof(*value)
+			conn, attr, buf, len, offset, read_data_p, sizeof(len)
 			);
 	}
 
@@ -49,12 +50,12 @@ static ssize_t read_button(struct bt_conn *conn,
 }
 
 BT_GATT_SERVICE_DEFINE(app_svc,
-BT_GATT_PRIMARY_SERVICE(BT_UUID_BASE),
+BT_GATT_PRIMARY_SERVICE(APP_BT_UUID_BASE),
 	BT_GATT_CHARACTERISTIC(
-		BT_UUID_BATTERY,
+		APP_BT_UUID_CHAR,
 		BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY,
-		BT_GATT_PERM_READ, read_button, NULL,
-		&batery_level),
+		BT_GATT_PERM_READ, read_function, NULL,
+		&initial_val),
 	BT_GATT_CCC(app_ccc_cfg_changed,
 			BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
 );
@@ -62,21 +63,20 @@ BT_GATT_PRIMARY_SERVICE(BT_UUID_BASE),
 int bt_app_init(struct bt_app_cb *callbacks)
 {
 	if (callbacks) {
-		app_cb.battery_cb = callbacks->battery_cb;
+		app_cb.app_bt_cb = callbacks->app_bt_cb;
 	}
 
 	return bt_enable(NULL);
 }
 
-int bt_app_send_battery_level(int battery_level)
+int bt_app_send_data(void *data, int len)
 {
 	if (!notify_enabled) {
 		return -EACCES;
 	}
 
-	return bt_gatt_notify(NULL, &app_svc.attrs[2],
-				  &battery_level,
-				  sizeof(battery_level));
+	return bt_gatt_notify(
+		NULL, &app_svc.attrs[2], data, (uint16_t)len);
 }
 
 int bt_app_advertise_start(void)
@@ -87,7 +87,7 @@ int bt_app_advertise_start(void)
 	};
 
 	const struct bt_data sd[] = {
-		BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_BASE_VAL),
+		BT_DATA_BYTES(BT_DATA_UUID128_ALL, APP_BT_UUID_BASE_VAL),
 	};
 
 	return bt_le_adv_start(

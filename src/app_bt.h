@@ -10,16 +10,16 @@
 #define DEVICE_NAME     CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 // random number
-#define BT_UUID_BASE_VAL    BT_UUID_128_ENCODE(0xc7839aa8, 0x1903, 0x40b5, 0xa8f0, 0x426e09ffb390)
-#define BT_UUID_BATTERY_VAL BT_UUID_128_ENCODE(0xc7839aa9, 0x1903, 0x40b5, 0xa8f0, 0x426e09ffb390)
+#define APP_BT_UUID_BASE_VAL    BT_UUID_128_ENCODE(0xc7839aa8, 0x1903, 0x40b5, 0xa8f0, 0x426e09ffb390)
+#define APP_BT_UUID_CHAR_VAL BT_UUID_128_ENCODE(0xc7839aa9, 0x1903, 0x40b5, 0xa8f0, 0x426e09ffb390)
 
-#define BT_UUID_BASE    BT_UUID_DECLARE_128(BT_UUID_BASE_VAL)
-#define BT_UUID_BATTERY BT_UUID_DECLARE_128(BT_UUID_BATTERY_VAL)
+#define APP_BT_UUID_BASE    BT_UUID_DECLARE_128(APP_BT_UUID_BASE_VAL)
+#define APP_BT_UUID_CHAR    BT_UUID_DECLARE_128(APP_BT_UUID_CHAR_VAL)
 
-typedef int (*battery_cb_t)(void);
+typedef int (*app_bt_cb_t)(void *data);
 
 struct bt_app_cb {
-	battery_cb_t battery_cb;
+	app_bt_cb_t app_bt_cb;
 };
 
 /** @brief Initialize the app_bt Service.
@@ -33,14 +33,15 @@ struct bt_app_cb {
  */
 int bt_app_init(struct bt_app_cb *callbacks);
 
-/** @brief Send the battery level.
+/** @brief Send data (notify).
  *
- * @param[in] battery_level The battery level to send.
+ * @param[in] data notify data.
+ * @param[in] len length of notify data.
  *
  * @retval 0 If the operation was successful.
  *           Otherwise, a (negative) error code is returned.
  */
-int bt_app_send_battery_level(int battery_level);
+int bt_app_send_data(void *data, int len);
 
 /** @brief Start advertising.
  *

@@ -56,13 +56,6 @@ static struct sensors env_sensors = {
 
 const static struct device *led_dev;
 
-/** A discharge curve specific to the power source. */
-static const struct battery_level_point levels[] = {
-	/* Linear from maximum voltage to minimum voltage. */
-	{ 100, 3600 },
-	{ 0, 1700 },
-};
-static int app_battery_level = 100;
 static int app_battery_mV = 3000;
 
 static bool init_i2c_sensors(struct sensors *env_sensors);
@@ -84,24 +77,23 @@ static void app_work_handler(struct k_work *work)
 				batt_mV);
 	} else {
 		app_battery_mV = batt_mV;
-		app_battery_level = battery_level_pptt(batt_mV, levels);
 	}
-	bt_app_send_battery_level(app_battery_level);
+	bt_app_send_data(&app_battery_mV, sizeof(app_battery_mV));
 	battery_measure_enable(false);
 
 	get_i2c_sensors_values(&env_sensors);
 #ifdef CONFIG_SGP30
-	LOG_INF("%d C %d %% %4d hPa(t=%2d) %d ppm CO2 %d ppm TVOC %d mV(%d%%) %d mV(%d%%)",
+	LOG_INF("%d C %d %% %4d hPa(t=%2d) %d ppm CO2 %d ppm TVOC %d mV",
 		(int)env_sensors.temperature, (int)env_sensors.humidity,
 		(int)env_sensors.pressure, (int)env_sensors.temperature_p,
 		env_sensors.sgp30->CO2, env_sensors.sgp30->TVOC,
-		app_battery_mV, app_battery_level
+		app_battery_mV
 		);
 #else
-	LOG_INF("%d C %d %% %4d hPa(t=%2d) %d mV(%d%%)",
+	LOG_INF("%d C %d %% %4d hPa(t=%2d) %d mV",
 		(int)env_sensors.temperature, (int)env_sensors.humidity,
 		(int)env_sensors.pressure, (int)env_sensors.temperature_p,
-		app_battery_mV, app_battery_level
+		app_battery_mV
 		);
 #endif
 
@@ -133,13 +125,14 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.disconnected     = disconnected,
 };
 
-static int app_battery_cb(void)
+static int app_bt_cb(void *data)
 {
-	return app_battery_level;
+	data = (void *)&app_battery_mV;
+	return sizeof(app_battery_mV);
 }
 
 static struct bt_app_cb app_callbacks = {
-	.battery_cb = app_battery_cb,
+	.app_bt_cb = app_bt_cb,
 };
 
 static bool init_i2c_sensors(struct sensors *env_sensors)
