@@ -1,6 +1,8 @@
 # BLE Sensors on nRF52 device
 
 This software mesurements temperature, humidity and pressure by i2c sensors bellow.
+CO2 sensor(SGP30) is optional, because high consumption.
+if you run CO2 sensor, set `CONFIG_SGP30`.
 
 * nRF52 module: https://docid81hrs3j1.cloudfront.net/medialibrary/2019/06/isp_ble_DS1507.pdf
 * Sensors
