@@ -7,4 +7,4 @@
         + [SHT30](https://m5stack.oss-cn-shenzhen.aliyuncs.com/resource/docs/datasheet/unit/SHT3x_Datasheet_digital.pdf)
     + [M5Stack TVOC/eCO2 UNIT](https://docs.m5stack.com/en/unit/tvoc)
         + [SGP30](https://m5stack.oss-cn-shenzhen.aliyuncs.com/resource/docs/datasheet/unit/Sensirion_Gas_Sensors_SGP30_Datasheet.pdf)
-* Software environmet: nRF Connect SDK v1.9.1
+* Software environmet: nRF Connect SDK v2.0.0

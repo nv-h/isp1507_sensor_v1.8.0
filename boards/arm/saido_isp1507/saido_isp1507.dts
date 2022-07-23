@@ -22,18 +22,19 @@
 		};
 	};
 
-	pwmleds {
-		compatible = "pwm-leds";
-		pwm_led0: pwm_led_0 {
-			pwms = <&pwm0 11>;
-		};
-	};
+	// FIXME: Error on NCS v2.0.0 (This can build with NCS v1.9.1 or lower)
+	// pwmleds {
+	// 	compatible = "pwm-leds";
+	// 	pwm_led0: pwm_led_0 {
+	// 		pwms = <&pwm0 11>;
+	// 	};
+	// };
 
 
 	/* These aliases are provided for compatibility with samples */
 	aliases {
 		led0 = &led0;
-		pwm-led0 = &pwm_led0;
+		// pwm-led0 = &pwm_led0;
 		bootloader-led0 = &led0;
 	};
 
