@@ -3,7 +3,7 @@ from bleak import BleakScanner
 from bleak import BleakClient
 from struct import unpack
 
-DEVICE_NAME = "isp1507_sensor"
+DEVICE_NAME = "nrf52_sensor"
 SERVICE_UUID = "c7839aa8-1903-40b5-a8f0-426e09ffb390"
 CHARACTERISTIC_UUID = "c7839aa9-1903-40b5-a8f0-426e09ffb390"
 
