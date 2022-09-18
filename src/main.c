@@ -24,7 +24,7 @@ LOG_MODULE_REGISTER(sensor);
 #include "app_bt.h"
 
 /* 1000 msec = 1 sec */
-#define SLEEP_TIME_MS   1000
+#define SLEEP_TIME_MS   5000
 
 /* The devicetree node identifier for the "led0" alias. */
 #define LED0_NODE DT_ALIAS(led0)
@@ -235,8 +235,8 @@ void main(void)
 		return;
 	}
 
-	/* start periodic timer that expires once every second */
-	k_timer_start(&app_timer, K_SECONDS(1), K_SECONDS(1));
+	/* start periodic timer that expires once every 10 seconds */
+	k_timer_start(&app_timer, K_SECONDS(1), K_MSEC(SLEEP_TIME_MS));
 
 	// do nothing
 }
