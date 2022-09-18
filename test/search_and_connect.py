@@ -1,8 +1,10 @@
 import asyncio
-from bleak import discover
+from bleak import BleakScanner
 from bleak import BleakClient
+from bleak import exc
+from struct import unpack
 
-DEVICE_NAME = "isp1507_sensor"
+DEVICE_NAME = "nrf52_sensor"
 SERVICE_UUID = "c7839aa8-1903-40b5-a8f0-426e09ffb390"
 CHARACTERISTIC_UUID = "c7839aa9-1903-40b5-a8f0-426e09ffb390"
 
@@ -10,7 +12,7 @@ CHARACTERISTIC_UUID = "c7839aa9-1903-40b5-a8f0-426e09ffb390"
 async def main(target: str):
     found_devices = []
     for i in range(5):
-        devices = await discover()
+        devices = await BleakScanner.discover()
         # Retry multiple times because it may not be found
         for d in devices:
             if d.name is None :
@@ -31,8 +33,9 @@ async def main(target: str):
                 async with BleakClient(device, timeout=20.0) as client:
                     print(f"connected: {device.name}")
 
-                    read_data = await client.read_gatt_char(CHARACTERISTIC_UUID)
-                    print(f"read: {read_data}")
+                    read_bytes = await client.read_gatt_char(CHARACTERISTIC_UUID)
+                    read_data = unpack("<ifff", read_bytes)
+                    print(f"{read_data[0]/1000:.3f} V {read_data[1]:.2f} C {read_data[2]:.2f} % {read_data[3]:.2f} hPa")
 
                     print("disconnecting ...")
                     break
@@ -41,6 +44,12 @@ async def main(target: str):
                 continue
             except OSError as e:
                 print(f"OSError[{i}]: {e}")
+                continue
+            except AttributeError as e:
+                print(f"AttributeError[{i}]: {e}")
+                continue
+            except exc.BleakError as e:
+                print(f"BleakError[{i}]: {e}")
                 continue
             except asyncio.exceptions.TimeoutError as e:
                 print(f"TimeoutError: {e}")
