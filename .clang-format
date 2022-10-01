@@ -1,0 +1,7 @@
+---
+BasedOnStyle: Microsoft
+AlignAfterOpenBracket: BlockIndent
+BreakBeforeBraces: Linux
+AlignConsecutiveAssignments: Consecutive
+AlignConsecutiveMacros: true
+AlignConsecutiveDeclarations: true

@@ -41,47 +41,47 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
+
 #include <drivers/i2c.h>
 #include <zephyr.h>
 
 #include "sht3x.h"
 
-#define SHT3x_STATUS_CMD               0xF32D
-#define SHT3x_CLEAR_STATUS_CMD         0x3041
-#define SHT3x_RESET_CMD                0x30A2
-#define SHT3x_FETCH_DATA_CMD           0xE000
-#define SHT3x_HEATER_OFF_CMD           0x3066
+#define SHT3x_STATUS_CMD       0xF32D
+#define SHT3x_CLEAR_STATUS_CMD 0x3041
+#define SHT3x_RESET_CMD        0x30A2
+#define SHT3x_FETCH_DATA_CMD   0xE000
+#define SHT3x_HEATER_OFF_CMD   0x3066
 
 #define SHT3x_TIMEOUT_MS 1000
 
 const uint16_t SHT3x_MEASURE_CMD[6][3] = {
-        {0x2400, 0x240b, 0x2416},    // [SINGLE_SHOT][H,M,L] without clock stretching
-        {0x2032, 0x2024, 0x202f},    // [PERIODIC_05][H,M,L]
-        {0x2130, 0x2126, 0x212d},    // [PERIODIC_1 ][H,M,L]
-        {0x2236, 0x2220, 0x222b},    // [PERIODIC_2 ][H,M,L]
-        {0x2234, 0x2322, 0x2329},    // [PERIODIC_4 ][H,M,L]
-        {0x2737, 0x2721, 0x272a} };  // [PERIODIC_10][H,M,L]
+    {0x2400, 0x240b, 0x2416},  // [SINGLE_SHOT][H,M,L] without clock stretching
+    {0x2032, 0x2024, 0x202f},  // [PERIODIC_05][H,M,L]
+    {0x2130, 0x2126, 0x212d},  // [PERIODIC_1 ][H,M,L]
+    {0x2236, 0x2220, 0x222b},  // [PERIODIC_2 ][H,M,L]
+    {0x2234, 0x2322, 0x2329},  // [PERIODIC_4 ][H,M,L]
+    {0x2737, 0x2721, 0x272a}}; // [PERIODIC_10][H,M,L]
 
 #define SHT3x_MEAS_DURATION_REP_HIGH   15
 #define SHT3x_MEAS_DURATION_REP_MEDIUM 6
 #define SHT3x_MEAS_DURATION_REP_LOW    4
 
 // measurement durations in ms
-const uint8_t SHT3x_MEAS_DURATION_MS[3] = { SHT3x_MEAS_DURATION_REP_HIGH,
-                                            SHT3x_MEAS_DURATION_REP_MEDIUM,
-                                            SHT3x_MEAS_DURATION_REP_LOW };
+const uint8_t SHT3x_MEAS_DURATION_MS[3] = {
+    SHT3x_MEAS_DURATION_REP_HIGH, SHT3x_MEAS_DURATION_REP_MEDIUM, SHT3x_MEAS_DURATION_REP_LOW};
 
 /** Forward declaration of function for internal use */
 
-static bool sht3x_is_measuring  (sht3x_sensor_t*);
-static bool sht3x_send_command  (sht3x_sensor_t*, uint16_t);
-static bool sht3x_read_data     (sht3x_sensor_t*, uint8_t*,  uint32_t);
-static bool sht3x_get_status    (sht3x_sensor_t*, uint16_t*);
-static bool sht3x_reset         (sht3x_sensor_t*);
+static bool sht3x_is_measuring(sht3x_sensor_t *);
+static bool sht3x_send_command(sht3x_sensor_t *, uint16_t);
+static bool sht3x_read_data(sht3x_sensor_t *, uint8_t *, uint32_t);
+static bool sht3x_get_status(sht3x_sensor_t *, uint16_t *);
+static bool sht3x_reset(sht3x_sensor_t *);
 
-static uint8_t crc8 (uint8_t data[], int len);
+static uint8_t crc8(uint8_t data[], int len);
 
 static sht3x_sensor_t g_dev; // mallocできないのでここに宣言
 
@@ -92,34 +92,31 @@ bool sht3x_init_driver()
     return true;
 }
 
-
-sht3x_sensor_t* sht3x_init_sensor(const struct device *bus, uint16_t addr)
+sht3x_sensor_t *sht3x_init_sensor(const struct device *bus, uint16_t addr)
 {
-    sht3x_sensor_t* dev = &g_dev;
+    sht3x_sensor_t *dev = &g_dev;
 
     // if ((dev = malloc (sizeof(sht3x_sensor_t))) == NULL)
     //     return NULL;
 
     // inititalize sensor data structure
-    dev->bus  = bus;
-    dev->addr = addr;
-    dev->mode = sht3x_single_shot;
+    dev->bus             = bus;
+    dev->addr            = addr;
+    dev->mode            = sht3x_single_shot;
     dev->meas_start_time = 0;
-    dev->meas_started = false;
-    dev->meas_first = false;
+    dev->meas_started    = false;
+    dev->meas_first      = false;
 
     uint16_t status;
 
     // try to reset the sensor
-    if (!sht3x_reset(dev))
-    {
+    if (!sht3x_reset(dev)) {
         printk("sht3x_init_sensor: reset failed\n");
         return NULL;
     }
 
     // check again the status after clear status command
-    if (!sht3x_get_status(dev, &status))
-    {
+    if (!sht3x_get_status(dev, &status)) {
         printk("sht3x_init_sensor: get status failed\n");
         // free(dev);
         return NULL;
@@ -128,82 +125,76 @@ sht3x_sensor_t* sht3x_init_sensor(const struct device *bus, uint16_t addr)
     return dev;
 }
 
-
-bool sht3x_measure (sht3x_sensor_t* dev, float* temperature, float* humidity)
+bool sht3x_measure(sht3x_sensor_t *dev, float *temperature, float *humidity)
 {
-    if (!dev || (!temperature && !humidity)) return false;
-
-    if (!sht3x_start_measurement (dev, sht3x_single_shot, sht3x_high))
+    if (!dev || (!temperature && !humidity))
         return false;
 
-    k_msleep (SHT3x_MEAS_DURATION_MS[sht3x_high]);
+    if (!sht3x_start_measurement(dev, sht3x_single_shot, sht3x_high))
+        return false;
+
+    k_msleep(SHT3x_MEAS_DURATION_MS[sht3x_high]);
 
     sht3x_raw_data_t raw_data;
 
-    if (!sht3x_get_raw_data (dev, raw_data))
+    if (!sht3x_get_raw_data(dev, raw_data))
         return false;
 
-    return sht3x_compute_values (raw_data, temperature, humidity);
+    return sht3x_compute_values(raw_data, temperature, humidity);
 }
 
-
-bool sht3x_start_measurement (sht3x_sensor_t* dev, sht3x_mode_t mode, sht3x_repeat_t repeat)
+bool sht3x_start_measurement(sht3x_sensor_t *dev, sht3x_mode_t mode, sht3x_repeat_t repeat)
 {
-    if (!dev) return false;
+    if (!dev)
+        return false;
 
-    dev->error_code = SHT3x_OK;
-    dev->mode = mode;
+    dev->error_code    = SHT3x_OK;
+    dev->mode          = mode;
     dev->repeatability = repeat;
 
     // start measurement according to selected mode and return an duration estimate
-    if (!sht3x_send_command(dev, SHT3x_MEASURE_CMD[mode][repeat]))
-    {
+    if (!sht3x_send_command(dev, SHT3x_MEASURE_CMD[mode][repeat])) {
         dev->error_code |= SHT3x_SEND_MEAS_CMD_FAILED;
         return false;
     }
 
     dev->meas_start_time = k_uptime_get();
-    dev->meas_started = true;
-    dev->meas_first = true;
+    dev->meas_started    = true;
+    dev->meas_first      = true;
 
     return true;
 }
 
-
-uint8_t sht3x_get_measurement_duration (sht3x_repeat_t repeat)
+uint8_t sht3x_get_measurement_duration(sht3x_repeat_t repeat)
 {
     return SHT3x_MEAS_DURATION_MS[repeat];
 }
 
-
-bool sht3x_get_raw_data(sht3x_sensor_t* dev, sht3x_raw_data_t raw_data)
+bool sht3x_get_raw_data(sht3x_sensor_t *dev, sht3x_raw_data_t raw_data)
 {
-    if (!dev || !raw_data) return false;
+    if (!dev || !raw_data)
+        return false;
 
     dev->error_code = SHT3x_OK;
 
-    if (!dev->meas_started)
-    {
+    if (!dev->meas_started) {
         dev->error_code = SHT3x_MEAS_NOT_STARTED;
-        return sht3x_is_measuring (dev);
+        return sht3x_is_measuring(dev);
     }
 
-    if (sht3x_is_measuring(dev))
-    {
+    if (sht3x_is_measuring(dev)) {
         dev->error_code = SHT3x_MEAS_STILL_RUNNING;
         return false;
     }
 
     // send fetch command in any periodic mode (mode > 0) before read raw data
-    if (dev->mode && !sht3x_send_command(dev, SHT3x_FETCH_DATA_CMD))
-    {
+    if (dev->mode && !sht3x_send_command(dev, SHT3x_FETCH_DATA_CMD)) {
         dev->error_code |= SHT3x_SEND_FETCH_CMD_FAILED;
         return false;
     }
 
     // read raw data
-    if (!sht3x_read_data(dev, raw_data, sizeof(sht3x_raw_data_t)))
-    {
+    if (!sht3x_read_data(dev, raw_data, sizeof(sht3x_raw_data_t))) {
         dev->error_code |= SHT3x_READ_RAW_DATA_FAILED;
         return false;
     }
@@ -216,15 +207,13 @@ bool sht3x_get_raw_data(sht3x_sensor_t* dev, sht3x_raw_data_t raw_data)
         dev->meas_started = false;
 
     // check temperature crc
-    if (crc8(raw_data, 2) != raw_data[2])
-    {
+    if (crc8(raw_data, 2) != raw_data[2]) {
         dev->error_code |= SHT3x_WRONG_CRC_TEMPERATURE;
         return false;
     }
 
     // check humidity crc
-    if (crc8(raw_data+3, 2) != raw_data[5])
-    {
+    if (crc8(raw_data + 3, 2) != raw_data[5]) {
         dev->error_code |= SHT3x_WRONG_CRC_HUMIDITY;
         return false;
     }
@@ -232,10 +221,10 @@ bool sht3x_get_raw_data(sht3x_sensor_t* dev, sht3x_raw_data_t raw_data)
     return true;
 }
 
-
-bool sht3x_compute_values (sht3x_raw_data_t raw_data, float* temperature, float* humidity)
+bool sht3x_compute_values(sht3x_raw_data_t raw_data, float *temperature, float *humidity)
 {
-    if (!raw_data) return false;
+    if (!raw_data)
+        return false;
 
     if (temperature)
         *temperature = ((((raw_data[0] * 256.0) + raw_data[1]) * 175) / 65535.0) - 45;
@@ -246,31 +235,32 @@ bool sht3x_compute_values (sht3x_raw_data_t raw_data, float* temperature, float*
     return true;
 }
 
-
-bool sht3x_get_results (sht3x_sensor_t* dev, float* temperature, float* humidity)
+bool sht3x_get_results(sht3x_sensor_t *dev, float *temperature, float *humidity)
 {
-    if (!dev || (!temperature && !humidity)) return false;
+    if (!dev || (!temperature && !humidity))
+        return false;
 
     sht3x_raw_data_t raw_data;
 
-    if (!sht3x_get_raw_data (dev, raw_data))
+    if (!sht3x_get_raw_data(dev, raw_data))
         return false;
 
-    return sht3x_compute_values (raw_data, temperature, humidity);
+    return sht3x_compute_values(raw_data, temperature, humidity);
 }
 
 /* Functions for internal use only */
 
-static bool sht3x_is_measuring (sht3x_sensor_t* dev)
+static bool sht3x_is_measuring(sht3x_sensor_t *dev)
 {
-    if (!dev) return false;
+    if (!dev)
+        return false;
 
     dev->error_code = SHT3x_OK;
 
     // not running if measurement is not started at all or
     // it is not the first measurement in periodic mode
     if (!dev->meas_started || !dev->meas_first)
-      return false;
+        return false;
 
     // not running if time elapsed is greater than duration
     int64_t elapsed = k_uptime_delta(&dev->meas_start_time);
@@ -278,51 +268,49 @@ static bool sht3x_is_measuring (sht3x_sensor_t* dev)
     return elapsed < SHT3x_MEAS_DURATION_MS[dev->repeatability];
 }
 
-
-static bool sht3x_send_command(sht3x_sensor_t* dev, uint16_t cmd)
+static bool sht3x_send_command(sht3x_sensor_t *dev, uint16_t cmd)
 {
-    if (!dev) return false;
+    if (!dev)
+        return false;
 
-    uint8_t data[2] = { cmd >> 8, cmd & 0xff };
+    uint8_t data[2] = {cmd >> 8, cmd & 0xff};
 
     int err = i2c_write(dev->bus, data, 2, dev->addr);
 
-    if (err)
-    {
+    if (err) {
         return false;
     }
 
     return true;
 }
 
-static bool sht3x_read_data(sht3x_sensor_t* dev, uint8_t *data,  uint32_t len)
+static bool sht3x_read_data(sht3x_sensor_t *dev, uint8_t *data, uint32_t len)
 {
-    if (!dev) return false;
+    if (!dev)
+        return false;
     int err = i2c_read(dev->bus, data, len, dev->addr);
 
-    if (err)
-    {
+    if (err) {
         return false;
     }
 
     return true;
 }
 
-
-static bool sht3x_reset (sht3x_sensor_t* dev)
+static bool sht3x_reset(sht3x_sensor_t *dev)
 {
-    if (!dev) return false;
+    if (!dev)
+        return false;
 
     dev->error_code = SHT3x_OK;
 
     // send reset command
-    if (!sht3x_send_command(dev, SHT3x_RESET_CMD))
-    {
+    if (!sht3x_send_command(dev, SHT3x_RESET_CMD)) {
         dev->error_code |= SHT3x_SEND_RESET_CMD_FAILED;
         return false;
     }
     // wait for small amount of time needed (according to datasheet 0.5ms)
-    k_msleep (100);
+    k_msleep(100);
 
     uint16_t status;
 
@@ -333,17 +321,16 @@ static bool sht3x_reset (sht3x_sensor_t* dev)
     return true;
 }
 
-
-static bool sht3x_get_status (sht3x_sensor_t* dev, uint16_t* status)
+static bool sht3x_get_status(sht3x_sensor_t *dev, uint16_t *status)
 {
-    if (!dev || !status) return false;
+    if (!dev || !status)
+        return false;
 
     dev->error_code = SHT3x_OK;
 
-    uint8_t  data[3];
+    uint8_t data[3];
 
-    if (!sht3x_send_command(dev, SHT3x_STATUS_CMD) || !sht3x_read_data(dev, data, 3))
-    {
+    if (!sht3x_send_command(dev, SHT3x_STATUS_CMD) || !sht3x_read_data(dev, data, 3)) {
         dev->error_code |= SHT3x_SEND_STATUS_CMD_FAILED;
         return false;
     }
@@ -352,24 +339,21 @@ static bool sht3x_get_status (sht3x_sensor_t* dev, uint16_t* status)
     return true;
 }
 
-
 const uint8_t g_polynom = 0x31;
 
-static uint8_t crc8 (uint8_t data[], int len)
+static uint8_t crc8(uint8_t data[], int len)
 {
     // initialization value
     uint8_t crc = 0xff;
 
     // iterate over all bytes
-    for (int i=0; i < len; i++)
-    {
+    for (int i = 0; i < len; i++) {
         crc ^= data[i];
 
-        for (int i = 0; i < 8; i++)
-        {
+        for (int i = 0; i < 8; i++) {
             bool xor = crc & 0x80;
-            crc = crc << 1;
-            crc = xor ? crc ^ g_polynom : crc;
+            crc      = crc << 1;
+            crc      = xor? crc ^ g_polynom : crc;
         }
     }
 

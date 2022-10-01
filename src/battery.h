@@ -30,11 +30,11 @@ int battery_sample(void);
  * monotonic decreasing within the sequence.
  */
 struct battery_level_point {
-	/** Remaining life at #lvl_mV. */
-	uint16_t lvl_pptt;
+    /** Remaining life at #lvl_mV. */
+    uint16_t lvl_pptt;
 
-	/** Battery voltage at #lvl_pptt remaining life. */
-	uint16_t lvl_mV;
+    /** Battery voltage at #lvl_pptt remaining life. */
+    uint16_t lvl_mV;
 };
 
 /** Calculate the estimated battery level based on a measured voltage.
@@ -47,7 +47,6 @@ struct battery_level_point {
  * @return the estimated remaining capacity in parts per ten
  * thousand.
  */
-unsigned int battery_level_pptt(unsigned int batt_mV,
-				const struct battery_level_point *curve);
+unsigned int battery_level_pptt(unsigned int batt_mV, const struct battery_level_point *curve);
 
 #endif /* APPLICATION_BATTERY_H_ */
