@@ -122,7 +122,6 @@ typedef enum {
  * @brief 	SHT3x sensor device data structure type
  */
 typedef struct {
-
     uint32_t              error_code;      // combined error codes
 
     const struct device * bus;             // I2C bus at which sensor is connected
@@ -134,7 +133,6 @@ typedef struct {
     bool                  meas_started;    // indicates whether measurement started
     int64_t               meas_start_time; // measurement start time in us
     bool                  meas_first;      // first measurement in periodic mode
-
 } sht3x_sensor_t;
 
 

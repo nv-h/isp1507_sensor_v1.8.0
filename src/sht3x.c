@@ -57,12 +57,12 @@
 #define SHT3x_TIMEOUT_MS 1000
 
 const uint16_t SHT3x_MEASURE_CMD[6][3] = {
-        {0x2400,0x240b,0x2416},    // [SINGLE_SHOT][H,M,L] without clock stretching
-        {0x2032,0x2024,0x202f},    // [PERIODIC_05][H,M,L]
-        {0x2130,0x2126,0x212d},    // [PERIODIC_1 ][H,M,L]
-        {0x2236,0x2220,0x222b},    // [PERIODIC_2 ][H,M,L]
-        {0x2234,0x2322,0x2329},    // [PERIODIC_4 ][H,M,L]
-        {0x2737,0x2721,0x272a} };  // [PERIODIC_10][H,M,L]
+        {0x2400, 0x240b, 0x2416},    // [SINGLE_SHOT][H,M,L] without clock stretching
+        {0x2032, 0x2024, 0x202f},    // [PERIODIC_05][H,M,L]
+        {0x2130, 0x2126, 0x212d},    // [PERIODIC_1 ][H,M,L]
+        {0x2236, 0x2220, 0x222b},    // [PERIODIC_2 ][H,M,L]
+        {0x2234, 0x2322, 0x2329},    // [PERIODIC_4 ][H,M,L]
+        {0x2737, 0x2721, 0x272a} };  // [PERIODIC_10][H,M,L]
 
 #define SHT3x_MEAS_DURATION_REP_HIGH   15
 #define SHT3x_MEAS_DURATION_REP_MEDIUM 6
@@ -216,14 +216,14 @@ bool sht3x_get_raw_data(sht3x_sensor_t* dev, sht3x_raw_data_t raw_data)
         dev->meas_started = false;
 
     // check temperature crc
-    if (crc8(raw_data,2) != raw_data[2])
+    if (crc8(raw_data, 2) != raw_data[2])
     {
         dev->error_code |= SHT3x_WRONG_CRC_TEMPERATURE;
         return false;
     }
 
     // check humidity crc
-    if (crc8(raw_data+3,2) != raw_data[5])
+    if (crc8(raw_data+3, 2) != raw_data[5])
     {
         dev->error_code |= SHT3x_WRONG_CRC_HUMIDITY;
         return false;
@@ -267,7 +267,7 @@ static bool sht3x_is_measuring (sht3x_sensor_t* dev)
 
     dev->error_code = SHT3x_OK;
 
-    // not running if measurement is not started at all or 
+    // not running if measurement is not started at all or
     // it is not the first measurement in periodic mode
     if (!dev->meas_started || !dev->meas_first)
       return false;
@@ -318,7 +318,6 @@ static bool sht3x_reset (sht3x_sensor_t* dev)
     // send reset command
     if (!sht3x_send_command(dev, SHT3x_RESET_CMD))
     {
-        
         dev->error_code |= SHT3x_SEND_RESET_CMD_FAILED;
         return false;
     }

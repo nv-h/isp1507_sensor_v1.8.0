@@ -29,7 +29,7 @@
 #include "qmp6988.h"
 
 static uint8_t qmp6988_deviceCheck(qmp6988_sensor_t* dev);
-static void qmp6988_softwareReset(qmp6988_sensor_t* dev);
+static bool qmp6988_softwareReset(qmp6988_sensor_t* dev);
 static int qmp6988_getCalibrationData(qmp6988_sensor_t* dev);
 static int16_t qmp6988_convTx02e(qmp6988_ik_data_t *ik, int32_t dt);
 static int32_t qmp6988_getPressure02e(qmp6988_ik_data_t *ik, int32_t dp, int16_t tx);
@@ -116,15 +116,21 @@ uint8_t qmp6988_deviceCheck(qmp6988_sensor_t* dev)
     return 1;
 }
 
-void qmp6988_softwareReset(qmp6988_sensor_t* dev)
+bool qmp6988_softwareReset(qmp6988_sensor_t* dev)
 {
     uint8_t ret;
 
-    ret = qmp6988_write_reg(dev, QMP6988_RESET_REG,0);
+    ret = qmp6988_write_reg(dev, QMP6988_RESET_REG, 0);
+    if (!ret) {
+        return false;
+    }
 
     k_msleep(20);
 
-    ret = qmp6988_write_reg(dev, QMP6988_RESET_REG,0);
+    ret = qmp6988_write_reg(dev, QMP6988_RESET_REG, 0);
+    if (!ret) {
+        return false;
+    }
 }
 
 int qmp6988_getCalibrationData(qmp6988_sensor_t* dev)
@@ -138,16 +144,16 @@ int qmp6988_getCalibrationData(qmp6988_sensor_t* dev)
     }
 
     dev->cali.COE_a0 = (int32_t)(((a_data_tr[18] << 12) \
-                | (a_data_tr[19] << 4) \
-                | (a_data_tr[24] & 0x0f))<<12);
+                | (a_data_tr[19] << 4)                  \
+                | (a_data_tr[24] & 0x0f)) << 12);
     dev->cali.COE_a0 = dev->cali.COE_a0>>12;
 
     dev->cali.COE_a1 = (int16_t)(((a_data_tr[20]) << 8) | a_data_tr[21]);
     dev->cali.COE_a2 = (int16_t)(((a_data_tr[22]) << 8) | a_data_tr[23]);
 
     dev->cali.COE_b00 = (int32_t)(((a_data_tr[0] << 12) \
-                | (a_data_tr[1] << 4) \
-                | ((a_data_tr[24] & 0xf0) >> 4))<<12);
+                | (a_data_tr[1] << 4)                   \
+                | ((a_data_tr[24] & 0xf0) >> 4)) << 12);
     dev->cali.COE_b00 = dev->cali.COE_b00>>12;
 
     dev->cali.COE_bt1 = (int16_t)(((a_data_tr[2]) << 8) | a_data_tr[3]);
@@ -269,7 +275,7 @@ void qmp6988_setOversamplingT(qmp6988_sensor_t* dev, uint8_t oversampling_t)
 
   qmp6988_read_data(dev, QMP6988_CTRLMEAS_REG, &data, 1);
   data &= 0x1f;
-  data |= (oversampling_t<<5);
+  data |= (oversampling_t << 5);
   qmp6988_write_reg(dev, QMP6988_CTRLMEAS_REG, data);
   k_msleep(20);
 }

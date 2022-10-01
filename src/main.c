@@ -61,7 +61,7 @@ static struct sensors env_sensors = {
 #endif
 };
 
-const static struct device *led_dev;
+static const struct device *led_dev;
 
 static send_data_t send_data = {
 	.battery_mV = 0,
