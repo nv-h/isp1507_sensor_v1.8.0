@@ -32,6 +32,9 @@ LOG_MODULE_REGISTER(sensor);
 #define PIN       DT_GPIO_PIN(LED0_NODE, gpios)
 #define FLAGS     DT_GPIO_FLAGS(LED0_NODE, gpios)
 
+// NOTE: SGP30 is very high comsumption (about 50 mA), so disable it
+#define CONFIG_SGP30
+
 struct sensors {
     const struct device *i2c_dev;
     sht3x_sensor_t      *sht3x;
@@ -50,6 +53,10 @@ typedef struct {
     float temperature;
     float humidity;
     float pressure;
+#ifdef CONFIG_SGP30
+    uint16_t co2;
+    uint16_t tvoc;
+#endif
 } send_data_t;
 
 static struct sensors env_sensors = {
@@ -68,6 +75,10 @@ static send_data_t send_data = {
     .temperature = 0,
     .humidity    = 0,
     .pressure    = 0,
+#ifdef CONFIG_SGP30
+    .co2  = 0,
+    .tvoc = 0,
+#endif
 };
 
 static bool init_i2c_sensors(struct sensors *env_sensors);
@@ -108,6 +119,10 @@ static void app_work_handler(struct k_work *work)
     send_data.temperature = env_sensors.temperature;
     send_data.humidity    = env_sensors.humidity;
     send_data.pressure    = env_sensors.pressure;
+#ifdef CONFIG_SGP30
+    send_data.co2 = env_sensors.sgp30->CO2;
+    send_data.tvoc = env_sensors.sgp30->TVOC;
+#endif
     bt_app_send_data(&send_data, sizeof(send_data_t));
 
     gpio_pin_set(led_dev, PIN, 1);

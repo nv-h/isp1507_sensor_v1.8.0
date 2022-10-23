@@ -9,7 +9,7 @@ CHARACTERISTIC_UUID = "c7839aa9-1903-40b5-a8f0-426e09ffb390"
 
 
 def notify_handler(sender, data):
-    unpacked = unpack("<ifff", data)
+    unpacked = unpack("<ifffhh", data)
     print(f"notify: {unpacked}")
 
 
@@ -27,7 +27,7 @@ async def main():
         print("connected")
 
         val = await client.read_gatt_char(CHARACTERISTIC_UUID)
-        print(f'read: {unpack("<ifff", val)}')
+        print(f'read: {unpack("<ifffhh", val)}')
 
         print('notify handler start')
         await client.start_notify(CHARACTERISTIC_UUID, notify_handler)
@@ -38,4 +38,5 @@ async def main():
         await client.stop_notify(CHARACTERISTIC_UUID)
 
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
