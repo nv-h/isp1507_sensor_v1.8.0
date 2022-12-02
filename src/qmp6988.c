@@ -126,6 +126,8 @@ bool qmp6988_softwareReset(qmp6988_sensor_t *dev)
     if (!ret) {
         return false;
     }
+
+    return true;
 }
 
 int qmp6988_getCalibrationData(qmp6988_sensor_t *dev)
