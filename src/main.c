@@ -26,12 +26,6 @@ LOG_MODULE_REGISTER(sensor);
 /* 1000 msec = 1 sec */
 #define SLEEP_TIME_MS 5000
 
-/* The devicetree node identifier for the "led0" alias. */
-#define LED0_NODE DT_ALIAS(led0)
-#define LED0      DT_GPIO_LABEL(LED0_NODE, gpios)
-#define PIN       DT_GPIO_PIN(LED0_NODE, gpios)
-#define FLAGS     DT_GPIO_FLAGS(LED0_NODE, gpios)
-
 // NOTE: SGP30 is very high comsumption (about 50 mA), so disable it
 #define CONFIG_SGP30
 
@@ -68,7 +62,7 @@ static struct sensors env_sensors = {
 #endif
 };
 
-static const struct device *led_dev;
+static struct gpio_dt_spec led0_spec = GPIO_DT_SPEC_GET(DT_NODELABEL(led0), gpios);
 
 static send_data_t send_data = {
     .battery_mV  = 0,
@@ -91,7 +85,7 @@ K_TIMER_DEFINE(app_timer, app_timer_handler, NULL);
 
 static void app_work_handler(struct k_work *work)
 {
-    gpio_pin_set(led_dev, PIN, 0);
+    gpio_pin_set_dt(&led0_spec, 0);
 
     battery_measure_enable(true);
     int batt_mV = battery_sample();
@@ -125,7 +119,7 @@ static void app_work_handler(struct k_work *work)
 #endif
     bt_app_send_data(&send_data, sizeof(send_data_t));
 
-    gpio_pin_set(led_dev, PIN, 1);
+    gpio_pin_set_dt(&led0_spec, 1);
 }
 
 static void app_timer_handler(struct k_timer *dummy)
@@ -217,13 +211,7 @@ void main(void)
     LOG_MODULE_DECLARE(sensor);
     int ret;
 
-    led_dev = device_get_binding(LED0);
-    if (led_dev == NULL) {
-        LOG_ERR("Cannot get LED device: %s", LED0);
-        return;
-    }
-
-    ret = gpio_pin_configure(led_dev, PIN, GPIO_OUTPUT_ACTIVE | FLAGS);
+    ret = gpio_pin_configure_dt(&led0_spec, GPIO_OUTPUT_ACTIVE);
     if (ret < 0) {
         LOG_ERR("Cannot configure LED pin [%d]", ret);
         return;
